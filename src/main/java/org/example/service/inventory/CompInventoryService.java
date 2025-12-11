@@ -63,7 +63,9 @@ public class CompInventoryService {
         Item item = itemService.getItemByIdOrThrow(Long.parseLong(request.getItem_id()));
         Long remainStock = getTotalRemain(item.getId());
         if(request.getType().toUpperCase().equals("W")){
-            throw new RuntimeException("Stok tidak cukup. Stock tersisa : " + remainStock);
+            if(request.getQty().longValue() > remainStock) {
+                throw new RuntimeException("Stok tidak cukup. Stock tersisa : " + remainStock);
+            }
         }
 
         Inventory inventory = new Inventory();
@@ -84,11 +86,25 @@ public class CompInventoryService {
     public GeneralResponse updateInventory(Long id, UpdateInventoryRequest request){
 
         Inventory inventory = inventoryService.getInventoryByIdOrThrow(id);
-        Long item_id =  (request.getItem_id() != null ? request.getItem_id() : inventory.getItem().getId());
+        String item_id =  (request.getItem_id() != null ? request.getItem_id() : inventory.getItem().getId().toString());
         Integer qty =  (request.getQty() != null ? request.getQty() : inventory.getQty());
-        String type = (request.getType() != null ? request.getType() : inventory.getType().name());
+        String type = (request.getType().toUpperCase() != null ? request.getType().toUpperCase() : inventory.getType().name());
 
-        Item item = itemService.getItemByIdOrThrow(item_id);
+        Item item = itemService.getItemByIdOrThrow(Long.parseLong(item_id));
+        Long remainStock = getTotalRemain(item.getId());
+        if(request.getType().toUpperCase().equals("W")){
+            if(item_id.equals(inventory.getItem().getId())){
+                Long newRemainStock = remainStock - inventory.getQty().longValue();
+                if(request.getQty().longValue() > newRemainStock) {
+                    throw new RuntimeException("Stok tidak cukup. Stock tersisa : " + newRemainStock);
+                }
+            }else{
+                if(request.getQty().longValue() > remainStock) {
+                    throw new RuntimeException("Stok tidak cukup. Stock tersisa : " + remainStock);
+                }
+            }
+        }
+
         inventory.setItem(item);
         inventory.setQty(qty);
         inventory.setType(ItemType.valueOf(type));
